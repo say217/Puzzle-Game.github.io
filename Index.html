@@ -1,0 +1,308 @@
+<DDOCTYPEOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>SLIDING PUZZLE</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.10.0/p5.min.js"></script>
+    <style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+
+body, html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+    font-family: 'Orbitron', sans-serif;
+    background: #000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Neon Glow Logo */
+#logo {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    box-shadow: 0 0 15px rgba(100, 181, 246, 0.9);
+}
+
+/* Moves Counter */
+#moves-container {
+    position: absolute;
+    top: 10%;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 18px;
+    color: #0ff;
+    text-shadow: 0 0 10px #0ff, 0 0 20px #0ff;
+}
+
+/* Game Area */
+#game-container {
+    position: relative;
+    width: 320px;
+    height: 320px;
+    border: 1px solid #0ff;
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.9);
+   
+    border-radius: 12px;
+}
+
+/* Start & Game Over Screens */
+#start-screen, #game-over-screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.85);
+    color: #fff;
+    text-align: center;
+    text-shadow: 0 0 10px #0ff;
+}
+
+#start-screen h1, #game-over-screen h2 {
+    font-size: 36px;
+    margin-bottom: 20px;
+    color: #0ff;
+}
+
+#start-screen p, #game-over-screen p {
+    font-size: 14px;
+    margin: 20px;
+    color: #ccc;
+}
+
+/* Neon Button */
+button {
+    margin-top: 0px;
+    padding: 12px 25px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 16px;
+    background: linear-gradient(135deg, #0ff, #08f);
+    color: white;
+    border: none;
+    cursor: pointer;
+    border-radius: 6px;
+   
+    transition: all 0.3s ease;
+}
+
+button:hover {
+    background: linear-gradient(135deg, #08f, #0ff);
+    box-shadow: 0 0 20px #08f, 0 0 40px #0ff;
+}
+
+  </style>
+</head>
+<body>
+  <img style="border:2px solid #0ff;"id="logo" src="https://i.postimg.cc/g0fhPc4x/IMG-20250209-193531.jpg" alt="Game Logo">
+
+    <div id="moves-container">
+        MOVES: <span id="moves">0</span>
+    </div>
+    <div id="game-container">
+        <div id="start-screen">
+            <h1>SAYAK PUZZLE</h1>
+            <p>
+                Welcome to Sliding Puzzle!<br>
+                Touch and drag to move the pieces.<br>
+              <span style="color:Red;"  > IF YOU WIN SAYAK GIVE YOU Rs-1000</span><br>
+      
+                
+                Good luck !!!
+            </p>
+            <button id="start-button">START</button>
+        </div>
+        <div id="game-over-screen" style="display: none;">
+            <h2>PUZZLE SOLVED</h2>
+            <p>Moves: <span id="final-moves"></span></p>
+          
+            <button id="restart-button">RESTART</button>
+        </div>
+    </div>
+    <script>
+  let puzzleGrid = [];
+let emptyTile = { row: 3, col: 3 };
+let moves = 0;
+let gameStarted = false;
+let puzzleImage;
+let tileSize;
+
+function preload() {
+    puzzleImage = loadImage('https://i.postimg.cc/9QjrLqDN/IMG-20250209-192649.jpg');
+}
+
+function setup() {
+    let canvas = createCanvas(320, 320);
+    canvas.parent('game-container');
+    tileSize = width / 4;
+    resetPuzzle();
+    noLoop();
+}
+
+function draw() {
+    if (!gameStarted) return;
+    background(0);
+    drawPuzzle();
+}
+
+function resetPuzzle() {
+    puzzleGrid = [
+        [1, 2, 3, 4],
+        [5, 6, 7, 8],
+        [9, 10, 11, 12],
+        [13, 14, 15, 0]
+    ];
+    shufflePuzzle();
+    moves = 0;
+    updateHUD();
+}
+
+function shufflePuzzle() {
+    // Ensure the empty tile is always in the bottom-right corner
+    puzzleGrid[3][3] = 0;
+    emptyTile.row = 3;
+    emptyTile.col = 3;
+
+    // Shuffle the remaining tiles
+    let flatGrid = puzzleGrid.flat().filter(tile => tile !== 0);
+    for (let i = flatGrid.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [flatGrid[i], flatGrid[j]] = [flatGrid[j], flatGrid[i]];
+    }
+
+    // Reconstruct the grid
+    let index = 0;
+    for (let row = 0; row < 4; row++) {
+        for (let col = 0; col < 4; col++) {
+            if (row !== 3 || col !== 3) {
+                puzzleGrid[row][col] = flatGrid[index++];
+            }
+        }
+            }
+
+    // Make random valid moves to shuffle the puzzle
+    for (let i = 0; i < 1000; i++) {
+        let row = Math.floor(Math.random() * 4);
+        let col = Math.floor(Math.random() * 4);
+        moveTile(row, col);
+    }
+}
+
+function drawPuzzle() {
+    let margin = 5;
+    let offsetX = (width - (tileSize * 4)) / 2;
+    let offsetY = (height - (tileSize * 4)) / 2;
+
+    for (let row = 0; row < 4; row++) {
+        for (let col = 0; col < 4; col++) {
+            if (puzzleGrid[row][col] !== 0) {
+                let x = col * tileSize + margin + offsetX;
+                let y = row * tileSize + margin + offsetY;
+                let tileIndex = puzzleGrid[row][col] - 1;
+                let tileRow = Math.floor(tileIndex / 4);
+                let tileCol = tileIndex % 4;
+                image(puzzleImage, x, y, tileSize - 2 * margin, tileSize - 2 * margin, tileCol * (puzzleImage.width / 4), tileRow * (puzzleImage.height / 4), puzzleImage.width / 4, puzzleImage.height / 4);
+            }
+        }
+    }
+}
+
+function touchStarted() {
+    if (!gameStarted) return;
+    let col = floor((mouseX - (width - (width / 4 * 4)) / 2) / (width / 4));
+    let row = floor((mouseY - (height - (height / 4 * 4)) / 2) / (height / 4));
+    moveTile(row, col);
+    return false;
+}
+
+function moveTile(row, col) {
+    const directions = [
+        { row: -1, col: 0 },
+        { row: 1, col: 0 },
+    { row: 0, col: -1 },
+        { row: 0, col: 1 }
+    ];
+
+    for (const direction of directions) {
+        const newRow = row + direction.row;
+        const newCol = col + direction.col;
+
+        if (newRow >= 0 && newRow < 4 && newCol >= 0 && newCol < 4) {
+            if (puzzleGrid[newRow][newCol] === 0) {
+                [puzzleGrid[row][col], puzzleGrid[newRow][newCol]] = [puzzleGrid[newRow][newCol], puzzleGrid[row][col]];
+                emptyTile.row = newRow;
+                emptyTile.col = newCol;
+                moves++;
+                updateHUD();
+                if (isPuzzleSolved()) {
+                    gameOver();
+                }
+                return;
+            }
+        }
+    }
+}
+
+function isPuzzleSolved() {
+    let solvedGrid = [
+        [1, 2, 3, 4],
+        [5, 6, 7, 8],
+        [9, 10, 11, 12],
+        [13, 14, 15, 0]
+    ];
+    for (let row = 0; row < 4; row++) {
+        for (let col = 0; col < 4; col++) {
+            if (puzzleGrid[row][col] !== solvedGrid[row][col]) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+function updateHUD() {
+    document.getElementById('moves').textContent = moves;
+}
+
+function gameOver() {
+    gameStarted = false;
+    document.getElementById('final-moves').textContent = moves;
+    document.getElementById('game-over-screen').style.display = 'flex';
+    noLoop();
+  }
+
+function createButton(id, text, callback) {
+    const button = document.getElementById(id);
+    button.addEventListener('click', callback);
+    return button;
+}
+
+createButton('start-button', 'START', () => {
+    gameStarted = true;
+    document.getElementById('start-screen').style.display = 'none';
+    loop();
+    document.documentElement.requestFullscreen();
+});
+
+createButton('restart-button', 'RESTART', () => {
+    resetPuzzle();
+    gameStarted = true;
+    document.getElementById('game-over-screen').style.display = 'none';
+    loop();
+});
+  </script>
+</body>
+</html>
